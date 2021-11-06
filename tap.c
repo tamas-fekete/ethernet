@@ -1,3 +1,4 @@
+
 #include <fcntl.h> /* O_RDWR */
 #include <string.h> /* memset(), memcpy() */
 #include <stdio.h> /* perror(), printf(), fprintf() */
@@ -34,38 +35,84 @@ typedef struct ethernet_header
     uint8_t smac[6];
     etherType ethertype;
     uint8_t payload[];
-}ethernet_header;
+}__attribute__((packed)) ethernet_header;
 
+typedef struct arp_header
+{
+    uint8_t hwtype[2];
+    uint8_t protype[2];
+    uint8_t hwsize;
+    uint8_t prosize;
+    uint8_t opcode[2];
+    
+    uint8_t sender_mac[6];
+    uint8_t sender_ip[4];
+    uint8_t dest_mac[6];
+    uint8_t dest_ip[4];
+ 
+}__attribute__((packed)) arp_header;
 
 int main(void)
 {
-    int i = 1;
     int fd;
-    int nbytes;
-    char buf[1600];
+    
+    ethernet_header *message = malloc(sizeof(ethernet_header) + sizeof(arp_header));
+    arp_header arp_message;
+    
+    // broadcast
+    message->dmac[5] = 0xff;
+    message->dmac[4] = 0xff;
+    message->dmac[3] = 0xff;
+    message->dmac[2] = 0xff;
+    message->dmac[1] = 0xff;
+    message->dmac[0] = 0xff;
+    
+    message->smac[5] = 0xbd;
+    message->smac[4] = 0xad;
+    message->smac[3] = 0x3b;
+    message->smac[2] = 0x09;
+    message->smac[1] = 0x2f;
+    message->smac[0] = 0x2c;
+    
+    message->ethertype.lowerByte = 0x06; // ether type for arp 
+    message->ethertype.upperByte = 0x08;
+    
+    arp_message.hwtype[0] =0;
+    arp_message.hwtype[1] =1;   // ethernet
 
-    ethernet_header *message = malloc(sizeof(ethernet_header) + 3*sizeof(char));
+    arp_message.protype[0] = 0x08; // IPv4
+    arp_message.protype[1] = 0x00;
     
-    message->dmac[5] = 0xef;
-    message->dmac[4] = 0x36;
-    message->dmac[3] = 0x26;
-    message->dmac[2] = 0xda;
-    message->dmac[1] = 0x10;
-    message->dmac[0] = 0xca;
-    
-    message->smac[5] = 0xee;
-    message->smac[4] = 0x35;
-    message->smac[3] = 0x25;
-    message->smac[2] = 0xd9;
-    message->smac[1] = 0x09;
-    message->smac[0] = 0xc9;
-    
-    message->ethertype.lowerByte = 3; // payload is 3 bytes long
-    message->ethertype.upperByte = 0;
+    arp_message.hwsize = 6; 
+    arp_message.prosize = 4;
+    arp_message.opcode[0] = 0;
+    arp_message.opcode[1] = 1;    // request
 
-    message->payload[0] = 'a';
-    message->payload[1] = 'b';
-    message->payload[2] = 'c';
+    arp_message.sender_mac[5] = 0xbd;
+    arp_message.sender_mac[4] = 0xad;
+    arp_message.sender_mac[3] = 0x3b;
+    arp_message.sender_mac[2] = 0x09;
+    arp_message.sender_mac[1] = 0x2f;
+    arp_message.sender_mac[0] = 0x2c;
+
+    arp_message.sender_ip[0] = 192;
+    arp_message.sender_ip[1] = 168;
+    arp_message.sender_ip[2] = 0;
+    arp_message.sender_ip[3] = 99;
+
+    arp_message.dest_mac[0] = 0x00;
+    arp_message.dest_mac[1] = 0x00;
+    arp_message.dest_mac[2] = 0x00;
+    arp_message.dest_mac[3] = 0x00;
+    arp_message.dest_mac[4] = 0x00;
+    arp_message.dest_mac[5] = 0x00;
+
+    arp_message.dest_ip[0] = 169;
+    arp_message.dest_ip[1] = 254;
+    arp_message.dest_ip[2] = 39;
+    arp_message.dest_ip[3] = 250;
+   
+    memcpy(message->payload, &arp_message, sizeof(arp_header));
     
     fd = tap_open("tap0"); /* devname = if.if_name = "tap0" */
     printf("Device tap0 opened\n");
@@ -73,9 +120,9 @@ int main(void)
         nbytes = read(fd, buf, sizeof(buf));
         printf("%d. Read %d bytes from tap0\n",i++, nbytes);
     }*/
-    write(fd, message, 17);
+    write(fd, message, sizeof(ethernet_header) + sizeof(arp_header));
     printf("Size of ethernet_header: %d\n", sizeof(struct ethernet_header));
-
+     
     exit(0);
 }
 
@@ -101,7 +148,6 @@ int tap_open(char *devname)
         close(fd);
         exit(1);
     }
-    /* after the ioctl call the fd is "connected" to tun device specified by devname ("tun0", "tun1") */
     
     return fd;
 }
