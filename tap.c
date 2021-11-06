@@ -14,43 +14,12 @@
 #include <linux/if.h>
 #include <linux/if_tun.h>
 
+/* local */
+
+#include "ethernet.h"
+#include "arp.h"
+
 int tap_open(char *devname);
-
-
-// Create struct to hold an ethernet frame:
-
-typedef union etherType
-{
-    uint16_t ethertype;
-    struct
-    {
-        uint8_t upperByte;
-        uint8_t lowerByte;
-    };
-   
-}etherType;
-typedef struct ethernet_header
-{
-    uint8_t dmac[6];
-    uint8_t smac[6];
-    etherType ethertype;
-    uint8_t payload[];
-}__attribute__((packed)) ethernet_header;
-
-typedef struct arp_header
-{
-    uint8_t hwtype[2];
-    uint8_t protype[2];
-    uint8_t hwsize;
-    uint8_t prosize;
-    uint8_t opcode[2];
-    
-    uint8_t sender_mac[6];
-    uint8_t sender_ip[4];
-    uint8_t dest_mac[6];
-    uint8_t dest_ip[4];
- 
-}__attribute__((packed)) arp_header;
 
 int main(void)
 {
