@@ -55,9 +55,12 @@ typedef struct arp_header
 int main(void)
 {
     int fd;
+    int nbytes;
     
     ethernet_header *message = malloc(sizeof(ethernet_header) + sizeof(arp_header));
+    ethernet_header *received = malloc(sizeof(ethernet_header) + sizeof(arp_header));
     arp_header arp_message;
+    arp_header *arp_received;
     
     // broadcast
     message->dmac[5] = 0xff;
@@ -109,20 +112,37 @@ int main(void)
 
     arp_message.dest_ip[0] = 169;
     arp_message.dest_ip[1] = 254;
-    arp_message.dest_ip[2] = 39;
-    arp_message.dest_ip[3] = 250;
+    arp_message.dest_ip[2] = 159;
+    arp_message.dest_ip[3] = 117;
+    
+    /*arp_message.dest_ip[0] = 192;
+    arp_message.dest_ip[1] = 168;
+    arp_message.dest_ip[2] = 0;
+    arp_message.dest_ip[3] = 182;*/
    
     memcpy(message->payload, &arp_message, sizeof(arp_header));
     
     fd = tap_open("tap0"); /* devname = if.if_name = "tap0" */
     printf("Device tap0 opened\n");
-    /*while(1){
-        nbytes = read(fd, buf, sizeof(buf));
-        printf("%d. Read %d bytes from tap0\n",i++, nbytes);
-    }*/
     write(fd, message, sizeof(ethernet_header) + sizeof(arp_header));
     printf("Size of ethernet_header: %d\n", sizeof(struct ethernet_header));
-     
+    printf("Who has %d.%d.%d.%d?\n", arp_message.dest_ip[0], arp_message.dest_ip[1], arp_message.dest_ip[2], arp_message.dest_ip[3]);
+    
+    nbytes = read(fd, received, sizeof(ethernet_header) + sizeof(arp_header));
+    arp_received = (arp_header*)received->payload;
+    
+    printf("%02x:%02x:%02x:%02x:%02x:%02x has it! Read %d bytes.\n\n", received->smac[0], received->smac[1], received->smac[2], received->smac[3], received->smac[4], received->smac[5], nbytes);
+    
+    printf("Address Resolution Protocol\n");
+    printf("Hardware type: %d\n", arp_received->hwtype[1]);
+    printf("Protocol type: 0x%02x%02x\n", arp_received->protype[0], arp_received->protype[1]);
+    printf("Hardware size: %d\n", arp_received->hwsize);
+    printf("Protocol size: %d\n", arp_received->prosize);
+    printf("Opcode: %d\n", arp_received->opcode[1]);
+    printf("Sender MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n", arp_received->sender_mac[0], arp_received->sender_mac[1], arp_received->sender_mac[2], arp_received->sender_mac[3], arp_received->sender_mac[4], arp_received->sender_mac[5]);
+    printf("Sender IP address: %d.%d.%d.%d\n", arp_received->sender_ip[0], arp_received->sender_ip[1], arp_received->sender_ip[2], arp_received->sender_ip[3]);     
+    printf("Target MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n", arp_received->dest_mac[0], arp_received->dest_mac[1], arp_received->dest_mac[2], arp_received->dest_mac[3], arp_received->dest_mac[4], arp_received->dest_mac[5]);
+    printf("Target IP address: %d.%d.%d.%d\n", arp_received->dest_ip[0], arp_received->dest_ip[1], arp_received->dest_ip[2], arp_received->dest_ip[3]); 
     exit(0);
 }
 
