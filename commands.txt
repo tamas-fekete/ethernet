@@ -1,0 +1,12 @@
+add interface(eth0) to bridge (br0):
+    $ brctl addif br0 eth0
+
+create bridge br0:
+    $ brctl addbr br0
+
+create tap device tap0:
+    $ ip tuntap add dev tap0 mode tap
+
+bring tap device up:
+    $ ifconfig tap0 up
+    $ ifconfig br0 up
