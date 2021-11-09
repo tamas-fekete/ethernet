@@ -1,5 +1,6 @@
 add interface(eth0) to bridge (br0):
     $ brctl addif br0 eth0
+    $ brctl addif bro tap0
 
 create bridge br0:
     $ brctl addbr br0
