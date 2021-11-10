@@ -53,7 +53,7 @@ typedef struct udp_header
     uint16_t dest_port;
     uint16_t length;
     uint16_t csum;  // optional in udp
-    uint8_t data;
+    uint8_t data[];
 }__attribute__((packed)) udp_header;
 
 uint16_t checksum(void *addr, int count)

@@ -21,6 +21,8 @@
 #include "arp.h"
 #include "ip.h"
 
+#define UDP_PAYLOAD (255U)
+
 int tap_open(char *devname);
 uint16_t checksum(void *addr, int count);
 
@@ -30,14 +32,15 @@ void send_arp(void);
 int main(void)
 {
     int fd;
+    int i;
     // send_arp();
     
     // ethernet header:
-    ethernet_header *message = malloc(sizeof(ethernet_header) + sizeof(ip_header) + sizeof(udp_header));
+    ethernet_header *message = (ethernet_header*)malloc(sizeof(ethernet_header) + sizeof(ip_header) + sizeof(udp_header) + UDP_PAYLOAD);
 
     ip_header_dummy ip_message_dummy;
-    ip_header ip_message;
-    udp_header udp_message;
+    ip_header *ip_message = (ip_header*)malloc(sizeof(ip_header));
+    udp_header *udp_message = (udp_header*)malloc(sizeof(udp_header) + UDP_PAYLOAD);
     
     // broadcast
     message->dmac[5] = 0xdc;
@@ -60,9 +63,9 @@ int main(void)
     ip_message_dummy.ihl = 5;     // 5 32bit words in ip header
     ip_message_dummy.version = 4; // IPv4
     ip_message_dummy.tos = 0;
-    ip_message_dummy.len = htons(sizeof(ip_header) + sizeof(udp_header));      // total length including ip_header + data
+    ip_message_dummy.len = htons(sizeof(ip_header) + sizeof(udp_header) + UDP_PAYLOAD);      // total length including ip_header + data
     ip_message_dummy.id = 0;
-    ip_message_dummy.ttl = 64;
+    ip_message_dummy.ttl = 64;  // time to live
     ip_message_dummy.proto = 17; // UDP
     ip_message_dummy.saddr[0] = 192;
     ip_message_dummy.saddr[1] = 168;
@@ -74,23 +77,39 @@ int main(void)
     ip_message_dummy.daddr[2] = 159;
     ip_message_dummy.daddr[3] = 117;
     
-    memcpy(&ip_message, &ip_message_dummy, 10);
-    memcpy(&(ip_message.saddr[0]), &(ip_message_dummy.saddr[0]), 8);
+    memcpy(ip_message, &ip_message_dummy, 10);
+    memcpy(&(ip_message->saddr[0]), &(ip_message_dummy.saddr[0]), 8);
     
-    ip_message.csum = checksum(&ip_message_dummy, 5);
-    printf("IP message checksum: %x\n total length: %d\n", ip_message.csum, sizeof(ip_header) + sizeof(udp_header)); 
+    ip_message->csum = checksum(&ip_message_dummy, 5);
+    // printf("IP message checksum: %x\n total length: %d\n", ip_message.csum, sizeof(ip_header) + sizeof(udp_header)); 
     
-    udp_message.source_port = 0;
-    udp_message.dest_port = htons(5000);
-    udp_message.length = htons(8);
-    udp_message.csum = 0; // not necessary
+    udp_message->source_port = 0;
+    udp_message->dest_port = htons(5000);
+    udp_message->length = htons(8 + UDP_PAYLOAD);     // 8 bytes header + UDP_PAYLOAD byte data
+    udp_message->csum = 0; // not necessary
     
-    memcpy(message->payload, &ip_message, sizeof(ip_header));
-    memcpy(((ip_header*)(message->payload))->data, &udp_message, sizeof(udp_header));
+    for (i = 0; i < UDP_PAYLOAD; i++)
+    {
+        udp_message->data[i] = i;
+    }
+    
+    
+    memcpy(message->payload, ip_message, sizeof(ip_header));
+    memcpy(((ip_header*)(message->payload))->data, udp_message, sizeof(udp_header) + UDP_PAYLOAD);
     
     fd = tap_open("tap0"); /* devname = if.if_name = "tap0" */
     printf("Device tap0 opened\n");
-    write(fd, message, sizeof(ethernet_header) + sizeof(arp_header));
+    printf("arp header: %d\n", sizeof(arp_header));
+    printf("ip header: %d\n", sizeof(ip_header));
+    printf("udp header: %d\n", sizeof(udp_header));
+    printf("ethernet header: %d\n", sizeof(ethernet_header));
+    
+    for (i = 0; i < 255; )
+    {
+        write(fd, message, sizeof(ethernet_header) + sizeof(ip_header) + sizeof(udp_header) + UDP_PAYLOAD);
+        ((udp_header*)(((ip_header*)(message->payload))->data))->data[0] = ++i;
+    }
+    
     
     exit(0);
 }
