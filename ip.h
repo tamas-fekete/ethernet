@@ -31,6 +31,14 @@ typedef struct ip_header_dummy
     
 }__attribute__((packed)) ip_header_dummy;
 
+typedef struct udp_header
+{
+    uint16_t source_port;
+    uint16_t dest_port;
+    uint16_t length;
+    uint16_t csum;  // optional in udp
+    uint8_t data[];
+}__attribute__((packed)) udp_header;
 
 typedef struct icmp_v4
 {
@@ -47,14 +55,7 @@ typedef struct icmp_v4_echo
     uint8_t data[];
 }__attribute__ ((packed)) icmp_v4_echo;
 
-typedef struct udp_header
-{
-    uint16_t source_port;
-    uint16_t dest_port;
-    uint16_t length;
-    uint16_t csum;  // optional in udp
-    uint8_t data[];
-}__attribute__((packed)) udp_header;
+
 
 uint16_t checksum(void *addr, int count)
 {
