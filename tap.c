@@ -80,7 +80,7 @@ int main(void)
     memcpy(ip_message, &ip_message_dummy, 10);
     memcpy(&(ip_message->saddr[0]), &(ip_message_dummy.saddr[0]), 8);
     
-    ip_message->csum = checksum(&ip_message_dummy, 5);
+    ip_message->csum = checksum(&ip_message_dummy, sizeof(ip_header_dummy));
     // printf("IP message checksum: %x\n total length: %d\n", ip_message.csum, sizeof(ip_header) + sizeof(udp_header)); 
     
     udp_message->source_port = 0;
